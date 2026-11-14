@@ -1,0 +1,29 @@
+# Harness config for bulb-agent. Plugin defaults (providers, pricing, loop limits) live in
+# /Users/christianarbelaez/code/software-factory/scripts/defaults.toml; anything set here overrides them for this project only.
+
+[project]
+name = "bulb-agent"
+description = "Open-source core of Bulb: dormant caretaker agents that wake on repo events or schedules and do small upkeep (dependency updates, security patches, fixing their own failed checks). Planned TypeScript monorepo on Node 24: JSON Schema contract, runner CLI, adapters and responsibilities, run via GitHub Actions."
+# Extra things the reviewers should check in this codebase:
+review_focus = [
+  "policy, scope and budget limits are enforced by the runner in code, not left to the model",
+  "secrets are never logged, printed, passed to the model or committed",
+  "TypeScript types come from the JSON Schema contract, not hand-written duplicates",
+  "provider- or host-specific code stays behind its adapter interface",
+  "safe defaults hold: no auto-merge, no pushes to the default branch, no edits to CI/workflow files or never_touch paths",
+  "nothing imports or depends on the private dashboard",
+]
+
+[accounts]
+claude = "personal"
+github = "Arbelaezch"
+# git_email = "you@example.com"  # doctor warns if a repo commits as someone else
+
+[git]
+mode = "commit"
+base_branch = "main"
+
+[repos.app]
+path = "."
+description = "TypeScript monorepo, Node 24 (not scaffolded yet)"
+# gates = [ { name = "tests", kind = "jest", cmd = "npx jest --ci" } ]   # none detected
