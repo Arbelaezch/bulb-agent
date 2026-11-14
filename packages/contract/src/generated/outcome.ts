@@ -9,9 +9,9 @@ export interface Outcome {
    */
   task_id: string;
   /**
-   * The responsibility the task belonged to.
+   * The responsibility the task belonged to; null when the runner ended the event before any responsibility ran (only with outcome skipped).
    */
-  responsibility: 'dep-updates' | 'vuln-patch' | 'ci-fix';
+  responsibility: 'dep-updates' | 'vuln-patch' | 'ci-fix' | null;
   /**
    * Target repository as owner/name.
    */

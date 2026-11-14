@@ -101,4 +101,40 @@ describe('parseOutcome', () => {
   ])('rejects %s', (_name, doc, issue) => {
     expect(issuesOf(doc)).toContainEqual(issue);
   });
+
+  it('accepts a skipped outcome with responsibility null and returns an equal clone', () => {
+    const doc = mutated(ready, (d) => {
+      d.outcome = 'skipped';
+      d.responsibility = null;
+    });
+    const outcome = parseOutcome(doc);
+    expect(outcome).toEqual(doc);
+    expect(outcome).not.toBe(doc);
+  });
+
+  it.each(['done', 'ready'])('rejects responsibility null with outcome %s', (kind) => {
+    const doc = mutated(ready, (d) => {
+      d.outcome = kind;
+      d.responsibility = null;
+    });
+    expect(issuesOf(doc)).toContainEqual({ path: 'outcome', message: 'must be equal to constant' });
+  });
+
+  it.each(['blocked', 'error'])('rejects responsibility null with outcome %s', (kind) => {
+    const doc = mutated(blocked, (d) => {
+      d.outcome = kind;
+      d.responsibility = null;
+    });
+    expect(doc.decision_needed).toBeDefined();
+    expect(issuesOf(doc)).toContainEqual({ path: 'outcome', message: 'must be equal to constant' });
+  });
+
+  it('rejects an unknown responsibility', () => {
+    const doc = mutated(ready, (d) => (d.responsibility = 'none'));
+    expect(issuesOf(doc)).toContainEqual({
+      path: 'responsibility',
+      message:
+        'must be equal to one of the allowed values: "dep-updates", "vuln-patch", "ci-fix", null',
+    });
+  });
 });

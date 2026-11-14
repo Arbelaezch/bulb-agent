@@ -139,6 +139,9 @@ describe('document generated types', () => {
       'done' | 'ready' | 'blocked' | 'error' | 'skipped'
     >();
     expectTypeOf<Outcome['decision_needed']>().toEqualTypeOf<string | undefined>();
+    // The conditional rules in the schema must not open the type to unknown keys.
+    expectTypeOf<Outcome>().not.toHaveProperty('not_a_field');
+    expectTypeOf<string>().not.toExtend<keyof Outcome>();
     expectTypeOf<WakeEvent['source']>().toEqualTypeOf<
       'github' | 'schedule' | 'dashboard' | 'bulb'
     >();

@@ -37,7 +37,8 @@ import { parseWakeEvent, parseOutcome, parseLifecycleNotification } from '<contr
 ```
 
 Shared shapes: ids are 1 to 128 characters of `[A-Za-z0-9._:-]` starting with a letter or digit; `repo` is
-`owner/name`; `responsibility` is `dep-updates`, `vuln-patch` or `ci-fix`; `caused_by` is `{ kind: 'event' | 'task', id }`;
+`owner/name`; `responsibility` is `dep-updates`, `vuln-patch` or `ci-fix` (an outcome's may also be `null`, see
+below); `caused_by` is `{ kind: 'event' | 'task', id }`;
 `links` is up to 20 `{ kind: 'pr' | 'run' | 'logs' | 'check' | 'other', url }` entries with http(s) URLs.
 
 ### Wake event (`WakeEvent`, `parseWakeEvent`, `wakeEventSchema`)
@@ -57,6 +58,10 @@ Required: `task_id`, `responsibility`, `repo`, `outcome` (`done`, `ready`, `bloc
 `blocked` and `error` must carry `decision_needed`; without it the only issue reported is
 `decision_needed: is required`. The rule is a root `if`/`then` that Ajv enforces at runtime, so the generated type
 keeps `decision_needed?: string`.
+
+`responsibility` is `null` only when the runner ended the event before a responsibility ran (an event type no
+configured responsibility handles, or an event past the maximum depth); that is allowed only with `skipped`,
+otherwise the issue is `outcome: must be equal to constant`.
 
 ### Lifecycle notification (`LifecycleNotification`, `parseLifecycleNotification`, `lifecycleNotificationSchema`)
 
