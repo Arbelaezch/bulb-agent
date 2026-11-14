@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ResponsibilityScope",
+  "description": "The paths a responsibility may change, declared by the responsibility and enforced by the runner. `never_touch` and workflow paths stay excluded by the runner whatever this allowlist says.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["responsibility", "paths"],
+  "properties": {
+    "responsibility": {
+      "description": "The responsibility this scope belongs to.",
+      "enum": ["dep-updates", "vuln-patch", "ci-fix"]
+    },
+    "paths": {
+      "description": "Glob allowlist of paths the responsibility may change, relative to each configured directory. No leading `/`, no `..` segment, no backslash, and no brace or extglob syntax (`{`, `}`, `(`, `)`), so expansion cannot produce a `..` segment.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256,
+        "pattern": "^(?!/)(?!(?:.*/)?\\.\\.(?:/|$))[^\\\\{}()]+$"
+      }
+    },
+    "max_diff_lines": {
+      "description": "Largest diff, in changed lines, the responsibility may produce.",
+      "type": "integer",
+      "minimum": 1
+    }
+  }
+}

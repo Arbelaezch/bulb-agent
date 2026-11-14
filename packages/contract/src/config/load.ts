@@ -1,20 +1,18 @@
 import { readFile } from 'node:fs/promises';
 import { Ajv2020 } from 'ajv/dist/2020.js';
-import type { ErrorObject, ValidateFunction } from 'ajv/dist/2020.js';
+import type { ValidateFunction } from 'ajv/dist/2020.js';
 import { parse, YAMLParseError } from 'yaml';
+import { formatIssues, toIssues } from '../validation/issues.js';
+import type { ValidationIssue } from '../validation/issues.js';
 import bulbConfigSchema from '../schemas/bulb-config.schema.json' with { type: 'json' };
 import type { BulbConfig } from '../generated/bulb-config.js';
 
 export { bulbConfigSchema };
 
-export interface BulbConfigIssue {
-  /** Dot path to the offending key, e.g. `notify.on[3]`; `""` for the root. */
-  path: string;
-  message: string;
-}
+export type BulbConfigIssue = ValidationIssue;
 
 function formatMessage(issues: readonly BulbConfigIssue[]): string {
-  return `Invalid bulb config:${issues.map((i) => `\n  ${i.path === '' ? '(root)' : i.path}: ${i.message}`).join('')}`;
+  return formatIssues('Invalid bulb config', issues);
 }
 
 export class BulbConfigError extends Error {
@@ -36,56 +34,12 @@ function getValidator(): ValidateFunction {
   return cachedValidator;
 }
 
-function toDotPath(pointer: string): string {
-  let path = '';
-  for (const raw of pointer.split('/').slice(1)) {
-    const segment = raw.replaceAll('~1', '/').replaceAll('~0', '~');
-    if (/^[0-9]+$/.test(segment)) path += `[${segment}]`;
-    else path += path === '' ? segment : `.${segment}`;
-  }
-  return path;
-}
-
-function join(path: string, key: string): string {
-  return path === '' ? key : `${path}.${key}`;
-}
-
-function toIssue(error: ErrorObject): BulbConfigIssue {
-  const path = toDotPath(error.instancePath);
-  const params = error.params as Record<string, unknown>;
-  if (error.keyword === 'additionalProperties') {
-    return { path: join(path, String(params.additionalProperty)), message: 'unknown key' };
-  }
-  if (error.keyword === 'required') {
-    return { path: join(path, String(params.missingProperty)), message: 'is required' };
-  }
-  if (error.keyword === 'enum' && Array.isArray(params.allowedValues)) {
-    // Allowed values come from the schema, not the config, so they are safe to show.
-    const allowed = params.allowedValues.map((v) => JSON.stringify(v)).join(', ');
-    return {
-      path,
-      message: `${error.message ?? 'must be equal to one of the allowed values'}: ${allowed}`,
-    };
-  }
-  return { path, message: error.message ?? 'is invalid' };
-}
-
-function dedupe(issues: BulbConfigIssue[]): BulbConfigIssue[] {
-  const seen = new Set<string>();
-  return issues.filter((i) => {
-    const key = `${i.path}\u0000${i.message}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
 /** Validates a parsed config value, fills defaults and returns the resolved config. Does not mutate `value`. */
 export function parseBulbConfig(value: unknown): BulbConfig {
   const clone = structuredClone(value);
   const validate = getValidator();
   if (!validate(clone)) {
-    throw new BulbConfigError(dedupe((validate.errors ?? []).map(toIssue)));
+    throw new BulbConfigError(toIssues(validate.errors));
   }
   // Ajv has filled every default in place, so the resolved type holds.
   return clone as BulbConfig;

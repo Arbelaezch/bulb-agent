@@ -142,7 +142,7 @@ export interface BulbConfigInput {
        */
       enabled?: boolean;
       /**
-       * Maximum fix attempts per PR. Default: 2.
+       * Maximum fix attempts per PR, 1 to 100. Default: 2.
        */
       attempts?: number;
       /**
@@ -329,7 +329,7 @@ export interface BulbConfig {
        */
       enabled: boolean;
       /**
-       * Maximum fix attempts per PR. Default: 2.
+       * Maximum fix attempts per PR, 1 to 100. Default: 2.
        */
       attempts: number;
       /**

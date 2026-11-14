@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LifecycleNotification",
+  "description": "A lifecycle notification sent to the owner when a task begins. It is separate from outcomes and does not end a task.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["notification", "task_id", "responsibility", "repo"],
+  "properties": {
+    "notification": {
+      "description": "Which lifecycle point this is; started is sent when a task begins.",
+      "enum": ["started"]
+    },
+    "task_id": {
+      "description": "Id of the task.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "responsibility": {
+      "description": "The responsibility the task belongs to.",
+      "enum": ["dep-updates", "vuln-patch", "ci-fix"]
+    },
+    "repo": {
+      "description": "Target repository as owner/name.",
+      "type": "string",
+      "maxLength": 200,
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "caused_by": {
+      "description": "The event or task that led to this task.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id"],
+      "properties": {
+        "kind": {
+          "description": "Whether the cause is an event or a task.",
+          "enum": ["event", "task"]
+        },
+        "id": {
+          "description": "Id of the causing event or task.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+        }
+      }
+    },
+    "summary": {
+      "description": "One-line summary of what the task is about to do.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^[^\\r\\n]+$"
+    },
+    "links": {
+      "description": "Related links: the PR, the run, logs or a check.",
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "url"],
+        "properties": {
+          "kind": {
+            "description": "What the link points to.",
+            "enum": ["pr", "run", "logs", "check", "other"]
+          },
+          "url": {
+            "description": "An http or https URL.",
+            "type": "string",
+            "maxLength": 2048,
+            "pattern": "^https?://\\S+$"
+          }
+        }
+      }
+    }
+  }
+}

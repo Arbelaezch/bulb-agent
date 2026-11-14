@@ -1,0 +1,13 @@
+{
+  "responsibility": "ci-fix",
+  "paths": [
+    "package.json",
+    "package-lock.json",
+    "requirements*.txt",
+    "pyproject.toml",
+    "poetry.lock",
+    "src/**",
+    "test/**"
+  ],
+  "max_diff_lines": 200
+}

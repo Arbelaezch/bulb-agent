@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WakeEvent",
+  "description": "A wake event, normalised from every source (GitHub, schedule, dashboard or another bulb). Carries provenance (`caused_by` and `depth`) so the runner can refuse events past a maximum depth and a bulb can't loop on its own pushes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "source", "type", "repo", "payload", "depth"],
+  "properties": {
+    "id": {
+      "description": "Unique id of this event.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "source": {
+      "description": "Where the event came from: github, schedule, dashboard, or bulb (emitted by a bulb, e.g. an outcome).",
+      "enum": ["github", "schedule", "dashboard", "bulb"]
+    },
+    "type": {
+      "description": "Dotted event type, e.g. dependabot.pr.opened, security.alert, check.completed, schedule.tick or action.retry.",
+      "type": "string",
+      "maxLength": 100,
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+    },
+    "repo": {
+      "description": "Target repository as owner/name.",
+      "type": "string",
+      "maxLength": 200,
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "payload": {
+      "description": "Source-specific event data; never holds secrets.",
+      "type": "object",
+      "additionalProperties": true
+    },
+    "depth": {
+      "description": "How many events or tasks led to this one; 0 for an external root event. The runner refuses events past its maximum depth.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "caused_by": {
+      "description": "The event or task that led to this event; absent for an external root event, required when depth is 1 or more.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id"],
+      "properties": {
+        "kind": {
+          "description": "Whether the cause is an event or a task.",
+          "enum": ["event", "task"]
+        },
+        "id": {
+          "description": "Id of the causing event or task.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+        }
+      }
+    }
+  },
+  "if": {
+    "required": ["depth"],
+    "properties": { "depth": { "type": "integer", "minimum": 1 } }
+  },
+  "then": {
+    "required": ["caused_by"],
+    "properties": { "caused_by": { "type": "object" } }
+  }
+}

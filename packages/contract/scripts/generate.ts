@@ -1,4 +1,4 @@
-// Generates src/generated/bulb-config.ts from src/schemas/bulb-config.schema.json.
+// Generates src/generated/<name>.ts from src/schemas/<name>.schema.json for every entry in `schemaEntries`.
 // Run with `npm run generate`; test/generated-types.test.ts fails when the committed output is stale.
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
@@ -8,14 +8,6 @@ import { format, resolveConfig } from 'prettier';
 
 type JsonObject = { [key: string]: unknown };
 type CompileSchema = Parameters<typeof compile>[0];
-
-const schemaPath = fileURLToPath(
-  new URL('../src/schemas/bulb-config.schema.json', import.meta.url),
-);
-const outputPath = fileURLToPath(new URL('../src/generated/bulb-config.ts', import.meta.url));
-
-const banner =
-  '/* Generated from src/schemas/bulb-config.schema.json by `npm run generate`. Do not edit by hand. */';
 
 function isObject(value: unknown): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -69,32 +61,89 @@ const compileOptions = {
   format: false,
   additionalProperties: false,
   unknownAny: true,
+  // Emit bounded arrays as `T[]`, not a union of every tuple length; Ajv still enforces `maxItems`.
+  maxItems: -1,
 } as const;
 
-/** Renders the generated TypeScript module (both BulbConfigInput and BulbConfig) as formatted text. */
-export async function renderBulbConfigTypes(): Promise<string> {
-  const schema = JSON.parse(await readFile(schemaPath, 'utf8')) as JsonObject;
+export interface TypeTarget {
+  title: string;
+  description?: string;
+  resolveDefaults: boolean;
+}
 
-  const input: JsonObject = {
-    ...structuredClone(schema),
-    title: 'BulbConfigInput',
-    description: 'Bulb config as written in `.bulb/config.yaml`; keys with defaults are optional.',
-  };
-  const resolved: JsonObject = {
-    ...withDefaultsRequired(structuredClone(schema)),
-    title: 'BulbConfig',
-    description: 'Bulb config after loading: schema defaults applied.',
-  };
+export interface SchemaEntry {
+  name: string;
+  types: readonly TypeTarget[];
+}
 
-  const inputTypes = await compile(input as CompileSchema, 'BulbConfigInput', compileOptions);
-  const resolvedTypes = await compile(resolved as CompileSchema, 'BulbConfig', compileOptions);
+/** Every schema that gets generated types. To add one: add the schema file, add an entry here, run `npm run generate`. */
+export const schemaEntries: readonly SchemaEntry[] = [
+  {
+    name: 'bulb-config',
+    types: [
+      {
+        title: 'BulbConfigInput',
+        description:
+          'Bulb config as written in `.bulb/config.yaml`; keys with defaults are optional.',
+        resolveDefaults: false,
+      },
+      {
+        title: 'BulbConfig',
+        description: 'Bulb config after loading: schema defaults applied.',
+        resolveDefaults: true,
+      },
+    ],
+  },
+  { name: 'wake-event', types: [{ title: 'WakeEvent', resolveDefaults: false }] },
+  { name: 'outcome', types: [{ title: 'Outcome', resolveDefaults: false }] },
+  {
+    name: 'lifecycle-notification',
+    types: [{ title: 'LifecycleNotification', resolveDefaults: false }],
+  },
+  { name: 'task-state', types: [{ title: 'TaskState', resolveDefaults: false }] },
+  {
+    name: 'responsibility-scope',
+    types: [{ title: 'ResponsibilityScope', resolveDefaults: false }],
+  },
+];
 
-  const text = `${banner}\n\n${inputTypes}\n${resolvedTypes}`;
-  return format(text, { ...(await resolveConfig(outputPath)), parser: 'typescript' });
+export function schemaPathFor(name: string): string {
+  return fileURLToPath(new URL(`../src/schemas/${name}.schema.json`, import.meta.url));
+}
+
+export function generatedPathFor(name: string): string {
+  return fileURLToPath(new URL(`../src/generated/${name}.ts`, import.meta.url));
+}
+
+/** Renders the generated TypeScript module for one schema entry as formatted text. */
+export async function renderTypes(entry: SchemaEntry): Promise<string> {
+  const schema = JSON.parse(await readFile(schemaPathFor(entry.name), 'utf8')) as JsonObject;
+
+  const compiled: string[] = [];
+  for (const target of entry.types) {
+    const base = target.resolveDefaults
+      ? withDefaultsRequired(structuredClone(schema))
+      : structuredClone(schema);
+    const targetSchema: JsonObject = { ...base, title: target.title };
+    if (target.description !== undefined) {
+      targetSchema.description = target.description;
+    }
+    compiled.push(await compile(targetSchema as CompileSchema, target.title, compileOptions));
+  }
+
+  const banner = `/* Generated from src/schemas/${entry.name}.schema.json by \`npm run generate\`. Do not edit by hand. */`;
+  const text = `${banner}\n\n${compiled.join('\n')}`;
+  return format(text, {
+    ...(await resolveConfig(generatedPathFor(entry.name))),
+    parser: 'typescript',
+  });
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  await mkdir(dirname(outputPath), { recursive: true });
-  await writeFile(outputPath, await renderBulbConfigTypes());
-  console.log(`Wrote ${outputPath}`);
+  for (const entry of schemaEntries) {
+    const outputPath = generatedPathFor(entry.name);
+    await mkdir(dirname(outputPath), { recursive: true });
+    await writeFile(outputPath, await renderTypes(entry));
+    console.log(`Wrote ${outputPath}`);
+  }
 }

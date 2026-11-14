@@ -19,6 +19,78 @@ parseDurationMs(config.responsibilities['dep-updates']?.min_release_age ?? '0d')
 `BulbConfigError`, whose `issues` list `{ path, message }` entries such as `budget.per_task_usd: unknown key` or
 `notify.on[3]: must be equal to one of the allowed values: ...`. Messages never include config values.
 
+## Type generation and validation errors
+
+`scripts/generate.ts` holds a list of schema entries (`schemaEntries`). To add a schema: add the file under
+`src/schemas/`, add an entry to the list, and run `npm run generate`.
+
+The document parsers (`parseWakeEvent` and the others below) throw `ContractValidationError`, which has a `document` name and the same
+`{ path, message }` `issues` as `BulbConfigError`. Messages never include input values.
+
+## Wake events, outcomes and lifecycle notifications
+
+Each document has a schema in `src/schemas/`, a generated type and a parser. Parsers take any value, return a
+validated clone, and throw `ContractValidationError` (no defaults are filled in).
+
+```ts
+import { parseWakeEvent, parseOutcome, parseLifecycleNotification } from '<contract package>';
+```
+
+Shared shapes: ids are 1 to 128 characters of `[A-Za-z0-9._:-]` starting with a letter or digit; `repo` is
+`owner/name`; `responsibility` is `dep-updates`, `vuln-patch` or `ci-fix`; `caused_by` is `{ kind: 'event' | 'task', id }`;
+`links` is up to 20 `{ kind: 'pr' | 'run' | 'logs' | 'check' | 'other', url }` entries with http(s) URLs.
+
+### Wake event (`WakeEvent`, `parseWakeEvent`, `wakeEventSchema`)
+
+Required: `id`, `source` (`github`, `schedule`, `dashboard` or `bulb`), `type` (dotted, e.g. `dependabot.pr.opened`,
+`schedule.tick`), `repo`, `payload` (source-specific object, never secrets) and `depth` (integer, `0` for an external
+root event). `caused_by` is optional at depth 0 and required at depth 1 or more. The schema sets no maximum depth; the
+runner enforces that.
+
+### Outcome (`Outcome`, `parseOutcome`, `outcomeSchema`)
+
+Required: `task_id`, `responsibility`, `repo`, `outcome` (`done`, `ready`, `blocked`, `error` or `skipped`), `summary`
+(one line, up to 200 characters) and `cost` (`{ cad, minutes }`, both >= 0; minutes are runner wall time). Optional:
+`tried` (up to 20 entries), `why`, `decision_needed`, `links` and `verification_signal` (`ci_checks`,
+`platform_check`, `verify_commands` or `none`).
+
+`blocked` and `error` must carry `decision_needed`; without it the only issue reported is
+`decision_needed: is required`. The rule is a root `if`/`then` that Ajv enforces at runtime, so the generated type
+keeps `decision_needed?: string`.
+
+### Lifecycle notification (`LifecycleNotification`, `parseLifecycleNotification`, `lifecycleNotificationSchema`)
+
+Sent when a task begins; it is not an outcome and does not end a task. Required: `notification` (only `started`),
+`task_id`, `responsibility` and `repo`. Optional: `caused_by`, `summary` and `links`.
+
+## Task state and responsibility scope
+
+```ts
+import { parseTaskState, assertTaskStateSize, parseResponsibilityScope } from '<contract package>';
+```
+
+### Task state (`TaskState`, `parseTaskState`, `taskStateSchema`)
+
+What a task carries between wake-ups, stored as compact JSON in a hidden PR comment. Required: `version` (must be
+`1`), `task_id`, `responsibility`, `attempts` (0 to 100), `cost_so_far_cad` and `minutes_so_far` (both >= 0; minutes
+are runner wall time only), `phase` and `caused_by`. Optional: `deadline`, a UTC timestamp as produced by
+`Date#toISOString`.
+
+`phase` is `running` (working) or `waiting` (asleep until an event or the deadline) while the task is live, or the
+outcome it ended in (`done`, `ready`, `blocked`, `error` or `skipped`). `waiting` requires `deadline`.
+
+Serialised as compact `JSON.stringify` output, task state must be at most `TASK_STATE_MAX_BYTES` (10,240) UTF-8 bytes.
+`taskStateByteLength(state)` measures it and `assertTaskStateSize(state)` throws a `RangeError` over the limit (the
+message gives only the sizes). The schema has no field for logs, transcripts or free text; such keys are rejected.
+
+### Responsibility scope (`ResponsibilityScope`, `parseResponsibilityScope`, `responsibilityScopeSchema`)
+
+The paths a responsibility may change. Required: `responsibility` and `paths` (1 to 100 unique globs, relative to each
+configured directory; no leading `/`, no `..` segment, no backslash, and no brace or extglob syntax `{ } ( )`, so
+glob expansion cannot produce a `..` segment). Optional: `max_diff_lines` (integer >= 1). The
+runner always excludes `never_touch` and workflow paths, whatever the allowlist says. The real allowlists ship with
+each responsibility package.
+
 ## Defaults
 
 Omitted keys take the defaults written in each key's schema `description`. Required: `version` (must be `1`) and
@@ -45,7 +117,7 @@ responsibilities get no default object.
 | `dep-updates.min_release_age` | `"7d"` |
 | `dep-updates.hold` | `{}` |
 | `dep-updates.group` | `"weekly"` |
-| `ci-fix.attempts` | `2` |
+| `ci-fix.attempts` | `2` (1 to 100, matching the task state cap) |
 | `ci-fix.max_diff_lines` | `200` |
 | `budget.per_task_cad` | `1` |
 | `budget.per_task_minutes` | `15` |

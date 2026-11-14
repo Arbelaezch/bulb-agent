@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Outcome",
+  "description": "How a task ended. Every task ends in exactly one outcome; `blocked` and `error` must say which decision the owner needs to make. Outcomes are also emitted as wake events so a later manager can listen to them.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["task_id", "responsibility", "repo", "outcome", "summary", "cost"],
+  "properties": {
+    "task_id": {
+      "description": "Id of the task that ended.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "responsibility": {
+      "description": "The responsibility the task belonged to.",
+      "enum": ["dep-updates", "vuln-patch", "ci-fix"]
+    },
+    "repo": {
+      "description": "Target repository as owner/name.",
+      "type": "string",
+      "maxLength": 200,
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "outcome": {
+      "description": "done: finished, nothing needed. ready: work is ready for approval (a PR). blocked: stopped by a rule or permission. error: something else broke and the bulb couldn't fix it within its limits. skipped: woke up but the event isn't something it handles.",
+      "enum": ["done", "ready", "blocked", "error", "skipped"]
+    },
+    "summary": {
+      "description": "One-line summary of what happened.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^[^\\r\\n]+$"
+    },
+    "tried": {
+      "description": "What the bulb tried, one entry per attempt or step.",
+      "type": "array",
+      "maxItems": 20,
+      "items": { "type": "string", "minLength": 1, "maxLength": 500 }
+    },
+    "why": {
+      "description": "Why the task stopped.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "decision_needed": {
+      "description": "The decision the owner needs to make; required when the outcome is blocked or error.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "links": {
+      "description": "Related links: the PR, the run, logs or a check.",
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "url"],
+        "properties": {
+          "kind": {
+            "description": "What the link points to.",
+            "enum": ["pr", "run", "logs", "check", "other"]
+          },
+          "url": {
+            "description": "An http or https URL.",
+            "type": "string",
+            "maxLength": 2048,
+            "pattern": "^https?://\\S+$"
+          }
+        }
+      }
+    },
+    "verification_signal": {
+      "description": "The verification signal used: the repo's CI checks, a platform check, the configured verify commands, or none.",
+      "enum": ["ci_checks", "platform_check", "verify_commands", "none"]
+    },
+    "cost": {
+      "description": "What the task cost, summed across wake-ups.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cad", "minutes"],
+      "properties": {
+        "cad": {
+          "description": "Model spend in Canadian dollars.",
+          "type": "number",
+          "minimum": 0
+        },
+        "minutes": {
+          "description": "Runner wall time in minutes (CI waiting not counted).",
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "if": {
+    "required": ["outcome"],
+    "properties": { "outcome": { "enum": ["blocked", "error"] } }
+  },
+  "then": {
+    "required": ["decision_needed"],
+    "properties": { "decision_needed": { "type": "string" } }
+  }
+}
