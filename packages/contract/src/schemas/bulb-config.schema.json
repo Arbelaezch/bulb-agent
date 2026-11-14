@@ -196,9 +196,10 @@
               "default": true
             },
             "attempts": {
-              "description": "Maximum fix attempts per PR. Default: 2.",
+              "description": "Maximum fix attempts per PR, 1 to 100. Default: 2.",
               "type": "integer",
               "minimum": 1,
+              "maximum": 100,
               "default": 2
             },
             "max_diff_lines": {

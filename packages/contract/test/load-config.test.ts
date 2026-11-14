@@ -170,6 +170,15 @@ describe('errors', () => {
     ]);
   });
 
+  it('caps ci-fix attempts at the task state maximum of 100', () => {
+    const issues = issuesOf(() =>
+      parseBulbConfig({ version: 1, responsibilities: { 'ci-fix': { attempts: 101 } } }),
+    );
+    expect(issues).toEqual([
+      { path: 'responsibilities.ci-fix.attempts', message: 'must be <= 100' },
+    ]);
+  });
+
   it('reports a wrong root type at (root)', () => {
     const issues = issuesOf(() => parseBulbConfig([]));
     expect(issues[0]?.path).toBe('');

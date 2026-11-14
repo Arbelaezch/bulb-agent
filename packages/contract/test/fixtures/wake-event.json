@@ -1,0 +1,9 @@
+{
+  "id": "evt-2026-11-13.0001",
+  "source": "bulb",
+  "type": "check.completed",
+  "repo": "example-owner/example-repo",
+  "payload": { "check_run_id": 123, "conclusion": "failure" },
+  "depth": 1,
+  "caused_by": { "kind": "task", "id": "task-dep-updates-42" }
+}

@@ -1,0 +1,8 @@
+{
+  "notification": "started",
+  "task_id": "task-vuln-patch-3",
+  "responsibility": "vuln-patch",
+  "repo": "example-owner/example-repo",
+  "caused_by": { "kind": "event", "id": "evt-schedule-tick-1" },
+  "summary": "Patching 1 high-severity advisory in package-lock.json."
+}

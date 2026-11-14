@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "task_id": "task-2026-11-13.ci-fix.42",
+  "responsibility": "ci-fix",
+  "attempts": 1,
+  "cost_so_far_cad": 0.37,
+  "minutes_so_far": 4.5,
+  "phase": "waiting",
+  "deadline": "2026-11-13T18:30:00.000Z",
+  "caused_by": { "kind": "event", "id": "gh-check-run-123456" }
+}

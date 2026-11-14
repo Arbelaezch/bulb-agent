@@ -1,0 +1,14 @@
+{
+  "task_id": "task-dep-updates-42",
+  "responsibility": "dep-updates",
+  "repo": "example-owner/example-repo",
+  "outcome": "ready",
+  "summary": "Grouped 4 patch and minor bumps in one PR; CI passed.",
+  "tried": ["Applied 4 bumps from npm outdated", "Ran npm ci and waited for CI"],
+  "links": [
+    { "kind": "pr", "url": "https://github.com/example-owner/example-repo/pull/7" },
+    { "kind": "run", "url": "https://github.com/example-owner/example-repo/actions/runs/1" }
+  ],
+  "verification_signal": "ci_checks",
+  "cost": { "cad": 0.12, "minutes": 3.5 }
+}

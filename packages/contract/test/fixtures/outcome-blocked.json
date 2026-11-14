@@ -1,0 +1,15 @@
+{
+  "task_id": "task-ci-fix-9",
+  "responsibility": "ci-fix",
+  "repo": "example-owner/example-repo",
+  "outcome": "blocked",
+  "summary": "The fix needs a change to a workflow file.",
+  "tried": ["Read the failing check log", "Traced the failure to .github/workflows/ci.yml"],
+  "why": "Bulbs never edit workflow files.",
+  "decision_needed": "Update the workflow yourself, or close the PR.",
+  "links": [
+    { "kind": "logs", "url": "https://github.com/example-owner/example-repo/actions/runs/2" }
+  ],
+  "verification_signal": "none",
+  "cost": { "cad": 0.05, "minutes": 1 }
+}

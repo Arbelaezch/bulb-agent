@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TaskState",
+  "description": "The state a task carries between wake-ups. Stored as compact JSON in a hidden PR comment, so it must be at most 10,240 bytes serialised. It never holds logs, transcripts or free text.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "task_id",
+    "responsibility",
+    "attempts",
+    "cost_so_far_cad",
+    "minutes_so_far",
+    "phase",
+    "caused_by"
+  ],
+  "properties": {
+    "version": {
+      "description": "Version of the stored state format, so it can be migrated later.",
+      "enum": [1]
+    },
+    "task_id": {
+      "description": "Id of the task this state belongs to.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "responsibility": {
+      "description": "The responsibility the task belongs to.",
+      "enum": ["dep-updates", "vuln-patch", "ci-fix"]
+    },
+    "attempts": {
+      "description": "How many attempts the task has made so far.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "cost_so_far_cad": {
+      "description": "Model spend so far in Canadian dollars, summed across wake-ups.",
+      "type": "number",
+      "minimum": 0
+    },
+    "minutes_so_far": {
+      "description": "Runner wall time so far in minutes, summed across wake-ups (CI waiting not counted).",
+      "type": "number",
+      "minimum": 0
+    },
+    "phase": {
+      "description": "running: the task is working. waiting: the task is asleep until an event or its deadline. done, ready, blocked, error or skipped: the outcome the task ended in.",
+      "enum": ["running", "waiting", "done", "ready", "blocked", "error", "skipped"]
+    },
+    "deadline": {
+      "description": "When a waiting task gives up waiting, as a UTC timestamp from Date#toISOString; required when phase is waiting.",
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,3})?Z$"
+    },
+    "caused_by": {
+      "description": "The event or task that started this task.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id"],
+      "properties": {
+        "kind": {
+          "description": "Whether the cause is an event or a task.",
+          "enum": ["event", "task"]
+        },
+        "id": {
+          "description": "Id of the causing event or task.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+        }
+      }
+    }
+  },
+  "if": {
+    "required": ["phase"],
+    "properties": { "phase": { "enum": ["waiting"] } }
+  },
+  "then": {
+    "required": ["deadline"],
+    "properties": { "deadline": { "type": "string" } }
+  }
+}
