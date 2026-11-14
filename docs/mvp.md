@@ -86,6 +86,11 @@ safety:                        # every rule can be changed, deliberately
   workflow_files: blocked      # editing .github/workflows/** stops the task as `blocked`
 ```
 
+The schema is `packages/contract/src/schemas/bulb-config.schema.json`; see `packages/contract/README.md` for the
+loader, defaults and error format. `version` and `responsibilities` are required; everything else has a default.
+`verify.timeout` (default `2h`) is how long to wait for the repo's CI checks. `ci-fix` also takes `max_diff_lines`
+(default 200). Unknown keys are rejected.
+
 Policy that the runner can enforce in code (release age, holds, allowed update types, paths, budgets) lives in the
 config, not in a prompt. The owner may also point `context.include` at files such as `CLAUDE.md`; by default a
 responsibility reads only what its job needs (manifests, lockfiles, the failing check's log).
@@ -196,7 +201,8 @@ With the dashboard: everything also goes to the task's thread there, which route
 
 1. **State without the dashboard.** **Decided:** a state store interface with two adapters; the default keeps compact
    JSON task state in a hidden comment on the bulb's PR plus a bulb label, and the dashboard is the second adapter.
-2. **Default `min_release_age`.** Proposal: 7 days (Personal-Website sets 14).
+2. **Default `min_release_age`.** Proposal: 7 days (Personal-Website sets 14). **Decided:** 7 days, the
+   default in the contract schema; a repo can set its own (Personal-Website uses 14d).
 3. **A second engine in the MVP.** **Decided:** the Claude engine only, with engine contract tests and a fake engine
    for runner tests; a generic tool-loop engine follows after the MVP.
 4. **The owner's own installs** exceed the free limit of 1; the dashboard needs an owner override.

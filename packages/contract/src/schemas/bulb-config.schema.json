@@ -1,0 +1,264 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BulbConfig",
+  "description": "Bulb config, `.bulb/config.yaml`",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "responsibilities"],
+  "properties": {
+    "version": {
+      "description": "Config format version; must be 1.",
+      "const": 1
+    },
+    "engine": {
+      "description": "Which model engine the bulb uses. Default: {}.",
+      "type": "object",
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "provider": {
+          "description": "Engine provider name. Default: \"anthropic\".",
+          "type": "string",
+          "minLength": 1,
+          "default": "anthropic"
+        },
+        "model": {
+          "description": "Model id; when omitted the engine adapter picks one. No default.",
+          "type": "string",
+          "minLength": 1
+        },
+        "effort": {
+          "description": "How much reasoning effort the engine spends. Default: \"medium\".",
+          "enum": ["low", "medium", "high"],
+          "default": "medium"
+        }
+      }
+    },
+    "context": {
+      "description": "Extra repo context given to the engine. Default: {}.",
+      "type": "object",
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "include": {
+          "description": "Repo paths or globs to include as context. Default: [].",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "default": []
+        }
+      }
+    },
+    "verify": {
+      "description": "How a change is verified before it is reported ready. Default: {}.",
+      "type": "object",
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "commands": {
+          "description": "Commands run locally to verify a change, in order. Default: [].",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "default": []
+        },
+        "working_directory": {
+          "description": "Directory the verify commands run in, relative to the repo root. Default: \".\".",
+          "type": "string",
+          "minLength": 1,
+          "default": "."
+        },
+        "timeout": {
+          "description": "How long to wait for the repo's CI checks, as <integer><unit> with unit m (minutes), h (hours) or d (days). Default: \"2h\".",
+          "type": "string",
+          "pattern": "^[1-9][0-9]*[mhd]$",
+          "default": "2h"
+        }
+      }
+    },
+    "merge": {
+      "description": "Merge behaviour for the bulb's PRs. Default: {}.",
+      "type": "object",
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "auto_merge": {
+          "description": "Whether the bulb may merge its own PRs. Default: false.",
+          "type": "boolean",
+          "default": false
+        },
+        "require_verified": {
+          "description": "Whether a PR must pass verification before it is reported ready or merged. Default: true.",
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "notify": {
+      "description": "Where and when the owner is notified. Default: {}.",
+      "type": "object",
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "webhook": {
+          "description": "Webhook URL, or a secret reference such as ${{ secrets.NAME }}; kept as an opaque string. No default.",
+          "type": "string",
+          "minLength": 1
+        },
+        "on": {
+          "description": "Lifecycle events and outcomes that trigger a notification. Default: [\"ready\", \"blocked\", \"error\"].",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["started", "ready", "blocked", "error", "done"] },
+          "default": ["ready", "blocked", "error"]
+        }
+      }
+    },
+    "responsibilities": {
+      "description": "The responsibilities this bulb has; a responsibility is configured when its key is present. At least one is required.",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "dep-updates": {
+          "description": "Keep dependencies up to date with grouped patch and minor bumps. No default.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "description": "Whether this responsibility runs. Default: true.",
+              "type": "boolean",
+              "default": true
+            },
+            "schedule": {
+              "description": "How often the bulb wakes to check for updates. Default: \"weekly\".",
+              "enum": ["daily", "weekly", "monthly"],
+              "default": "weekly"
+            },
+            "directories": {
+              "description": "Directories (relative to the repo root) whose manifests and lockfiles may be edited. Default: [\".\"].",
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string", "minLength": 1 },
+              "default": ["."]
+            },
+            "allow": {
+              "description": "Update kinds included in the grouped PR; majors always get their own PR. Default: [\"patch\", \"minor\"].",
+              "type": "array",
+              "uniqueItems": true,
+              "items": { "enum": ["patch", "minor"] },
+              "default": ["patch", "minor"]
+            },
+            "min_release_age": {
+              "description": "Minimum age of a release before it is picked up, as <integer><unit> with unit m (minutes), h (hours) or d (days); 0d means no waiting. Default: \"7d\".",
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]*)[mhd]$",
+              "default": "7d"
+            },
+            "hold": {
+              "description": "Packages held back, mapped to the reason they are held. Default: {}.",
+              "type": "object",
+              "additionalProperties": { "type": "string", "minLength": 1 },
+              "default": {}
+            },
+            "group": {
+              "description": "How patch and minor bumps are grouped into one PR. Default: \"weekly\".",
+              "enum": ["weekly"],
+              "default": "weekly"
+            }
+          }
+        },
+        "vuln-patch": {
+          "description": "Patch known vulnerabilities in dependencies. No default.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "description": "Whether this responsibility runs. Default: true.",
+              "type": "boolean",
+              "default": true
+            },
+            "directories": {
+              "description": "Directories (relative to the repo root) whose manifests and lockfiles may be edited. Default: [\".\"].",
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string", "minLength": 1 },
+              "default": ["."]
+            }
+          }
+        },
+        "ci-fix": {
+          "description": "Fix failing CI checks on PRs another responsibility opened, within that responsibility's directories. No default.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "description": "Whether this responsibility runs. Default: true.",
+              "type": "boolean",
+              "default": true
+            },
+            "attempts": {
+              "description": "Maximum fix attempts per PR. Default: 2.",
+              "type": "integer",
+              "minimum": 1,
+              "default": 2
+            },
+            "max_diff_lines": {
+              "description": "Maximum changed lines in one fix. Default: 200.",
+              "type": "integer",
+              "minimum": 1,
+              "default": 200
+            }
+          }
+        }
+      }
+    },
+    "budget": {
+      "description": "Per-task limits, summed across wake-ups. Default: {}.",
+      "type": "object",
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "per_task_cad": {
+          "description": "Maximum model spend per task, in Canadian dollars. Default: 1.",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 1
+        },
+        "per_task_minutes": {
+          "description": "Maximum runner wall time per task, in minutes (CI waiting not counted). Default: 15.",
+          "type": "integer",
+          "minimum": 1,
+          "default": 15
+        }
+      }
+    },
+    "safety": {
+      "description": "Safety limits the runner enforces. Default: {}.",
+      "type": "object",
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "never_touch": {
+          "description": "Path globs the bulb never reads into context or edits. Default: [\".env*\", \"**/secrets/**\"].",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "default": [".env*", "**/secrets/**"]
+        },
+        "never_push_default_branch": {
+          "description": "Never push to the default branch. Default: true.",
+          "type": "boolean",
+          "default": true
+        },
+        "never_force_push": {
+          "description": "Never force-push, except to bulb/* branches the bulb opened. Default: true.",
+          "type": "boolean",
+          "default": true
+        },
+        "workflow_files": {
+          "description": "How workflow files are treated; bulbs never edit them. Default: \"blocked\".",
+          "enum": ["blocked"],
+          "default": "blocked"
+        }
+      }
+    }
+  }
+}

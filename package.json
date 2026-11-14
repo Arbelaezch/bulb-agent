@@ -15,6 +15,7 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
+    "generate": "npm run generate --workspaces --if-present",
     "test": "vitest run",
     "lint": "eslint .",
     "format": "prettier --write .",
