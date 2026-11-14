@@ -15,8 +15,18 @@ belongs to the private paid dashboard; this repo must never depend on it.
   `adapters/*`, `responsibilities/*` (`dep-updates`, `vuln-patch`, `ci-fix`), and the GitHub Action.
 
 ## Commands
-<!-- No code yet. Add install/build/test/lint commands here (and gates in .claude/harness.toml) once the
-     monorepo is scaffolded. -->
+From the repo root:
+- `npm ci`: install from the lockfile (Node 24, see `.nvmrc`)
+- `npm run build`: build every workspace (`tsc` to `dist/`)
+- `npm test`: run all Vitest tests; one file: `npm test -- packages/runner/test/index.test.ts`
+- `npm run lint`: ESLint
+- `npm run typecheck`: `tsc` (no emit) in every workspace
+- `npm run format:check`: Prettier check (`npm run format` to fix)
+
+Workspaces are `packages/*`, `adapters/*`, `responsibilities/*`; a new workspace adds `build` and
+`typecheck` scripts and puts tests in `src/` or `test/` as `*.test.ts`.
+The npm scope `@bulb-agent` is unconfirmed; it lives only in the `name` fields of `packages/*/package.json`,
+so don't hard-code the scoped name in source or config until confirmed.
 
 ## Conventions and rules
 - The contract (JSON Schema) is the source of truth; TS types are generated from it, never hand-edited.
