@@ -105,6 +105,12 @@ export const schemaEntries: readonly SchemaEntry[] = [
     name: 'responsibility-scope',
     types: [{ title: 'ResponsibilityScope', resolveDefaults: false }],
   },
+  {
+    name: 'dashboard-request-headers',
+    types: [{ title: 'DashboardRequestHeaders', resolveDefaults: false }],
+  },
+  { name: 'dashboard-ack', types: [{ title: 'DashboardAck', resolveDefaults: false }] },
+  { name: 'dashboard-error', types: [{ title: 'DashboardError', resolveDefaults: false }] },
 ];
 
 export function schemaPathFor(name: string): string {

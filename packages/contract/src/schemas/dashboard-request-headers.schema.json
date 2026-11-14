@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DashboardRequestHeaders",
+  "description": "Headers every dashboard API request must carry. Header names are lower-case (as Node delivers them); other headers are allowed.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["authorization"],
+  "properties": {
+    "authorization": {
+      "description": "`Bearer <token>`: the case-sensitive scheme `Bearer`, one space, then an RFC 6750 token. The token is a secret: it must never be logged, recorded or echoed in an error.",
+      "type": "string",
+      "maxLength": 8192,
+      "pattern": "^Bearer [A-Za-z0-9._~+/-]+=*$"
+    }
+  }
+}

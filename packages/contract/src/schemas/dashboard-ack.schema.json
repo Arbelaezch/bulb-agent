@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DashboardAck",
+  "description": "Success body (status 200) for dashboard API writes: save task state, post outcome and post notification.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["ok"],
+  "properties": {
+    "ok": {
+      "description": "Always true.",
+      "enum": [true]
+    }
+  }
+}
