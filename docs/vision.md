@@ -45,9 +45,11 @@ needing them reaches them as **one clear message per repo**, with the decision t
 7. **Asks rather than guesses.** When a bulb stops, it says what it tried, why it stopped, and exactly what it
    needs. `blocked` means a rule or permission stopped it (the owner grants it or takes over). `error` means
    something else broke and needs the owner.
-8. **Config in git, state in the dashboard.** What a bulb does lives in the repo (or a home "fleet" repo) and is
-   reviewable and portable. Live state (paused, waiting, pending approval, saved context, history) lives in the
-   dashboard, which is part of why the dashboard is worth paying for.
+8. **Config in git, state in a pluggable store.** What a bulb does lives in the repo (or a home "fleet" repo) and is
+   reviewable and portable. Live task state (waiting, saved context, attempts, cost so far) is saved through a state
+   store adapter. The core works on its own without the dashboard and by default keeps compact state in a hidden
+   comment on the bulb's own PR. The dashboard is an optional state store and reporter that adds history, pause and
+   pending approvals across the fleet, which is part of why it is worth paying for.
 
 ## 3. Terminology
 
@@ -64,14 +66,14 @@ needing them reaches them as **one clear message per repo**, with the decision t
 | **Adapter** | A small piece that connects the runner to one host, wake source, engine, change channel or reporter. |
 | **Change channel** | How work lands: a pull request (MVP), applied directly (servers, later) or reported only. |
 | **Fleet** | All of an owner's bulbs. A **home repo** can hold shared config for the fleet. |
-| **Dashboard** | The paid hosted app: fleet view, task threads, remote actions, notifications, state. |
+| **Dashboard** | The paid hosted app: fleet view, task threads, remote actions, notifications, and an optional state store. |
 
 ## 4. Product shape
 
 - **`bulb-agent` (open source, Apache-2.0).** The contract (JSON Schema), the runner, the adapters and the starter
   responsibilities. Anyone can run it without the dashboard and write their own responsibilities.
 - **Bulb dashboard (paid, hosted SaaS only).** Fleet view, one thread per task, remote control (run now, retry,
-  answer, grant, approve and merge, pause), notification routing, the state store for resuming tasks, and later
+  answer, grant, approve and merge, pause), notification routing, an optional state store for resuming tasks (the core keeps state on its own PRs without it), and later
   managed model keys, a registry of responsibilities and bundled usage. Tentatively hosted at
   `bulb.modularmonolith.ca`, possibly its own domain later. Not self-hostable.
 
@@ -92,7 +94,7 @@ later); the first runner is **TypeScript**.
 | Capabilities | What the bulb may touch | git, package managers, declared commands | MCP servers, cloud APIs, OS packages |
 | Change channels | How work lands | pull request | direct apply with approval and rollback, report only |
 | Reporters | Where outcomes go | PR comment/check, generic webhook, dashboard, stdout | email replies, chat replies, mobile push |
-| State store | Saved task context for resuming | dashboard (see open questions in `mvp.md` for no-dashboard use) | others |
+| State store | Saved task context for resuming | PR comment (default: compact JSON in a hidden comment on the bulb's PR, plus a bulb label); dashboard (optional) | others |
 
 A task is: **wake → (cheap deterministic steps) → agent only if needed → verify → change channel → wait → report**.
 Deterministic steps (run the bump, run the build) come first so the model is only paid for when judgement is needed.
