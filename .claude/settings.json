@@ -1,15 +1,4 @@
 {
-  "extraKnownMarketplaces": {
-    "personal-harness": {
-      "source": {
-        "source": "directory",
-        "path": "/Users/christianarbelaez/code/software-factory"
-      }
-    }
-  },
-  "enabledPlugins": {
-    "harness@personal-harness": true
-  },
   "permissions": {
     "allow": [
       "Bash(python3 */scripts/harness.py *)",
@@ -21,5 +10,16 @@
       "Bash(git commit *)"
     ],
     "deny": []
+  },
+  "enabledPlugins": {
+    "harness@personal-harness": true
+  },
+  "extraKnownMarketplaces": {
+    "personal-harness": {
+      "source": {
+        "source": "directory",
+        "path": "/Users/christianarbelaez/code/software-factory"
+      }
+    }
   }
 }
