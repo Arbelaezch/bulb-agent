@@ -28,7 +28,7 @@ One bulb on each of the owner's two repos keeps their dependencies current and t
    engine, saves and resumes task state, emits the outcome.
 3. **Adapters**: GitHub Actions host; GitHub and schedule wake sources; Claude engine behind a pluggable engine
    interface; pull request change channel; reporters for PR comment/check, generic webhook, dashboard and stdout;
-   state store for the dashboard.
+   state store with a PR-comment default and the dashboard as an optional second adapter.
 4. **Three responsibilities**: `dep-updates`, `vuln-patch`, `ci-fix` (section 5).
 5. **Package ecosystems**: npm and pip (`requirements.txt`). Others later.
 6. A **setup path** that installs the bulb on a repo: the workflow file, the config file and the secrets it needs.
@@ -63,12 +63,12 @@ merge:
   require_verified: true       # never auto-merge without a passing check
 notify:
   webhook: ${{ secrets.BULB_WEBHOOK_URL }}   # Discord / Slack / ntfy compatible
-  on: [ready, blocked, error]  # optionally also: started, done
+  on: [ready, blocked, error]  # optionally also: started (lifecycle notification), done
 responsibilities:
   dep-updates:
     schedule: weekly           # default; configurable per bulb
     directories: [apps/web/family-food]
-    allow: [patch, minor]      # majors become their own PR that is never auto-merged
+    allow: [patch, minor]      # grouped PR only; each major gets its own PR, one per package, never auto-merged
     min_release_age: 7d
     hold: {}                   # e.g. { django: "5.2.x" }
     group: weekly
@@ -77,7 +77,7 @@ responsibilities:
   ci-fix:
     attempts: 2
 budget:
-  per_task_usd: 1.00
+  per_task_cad: 1.00           # Canadian dollars
   per_task_minutes: 15
 safety:                        # every rule can be changed, deliberately
   never_touch: [".env*", "**/secrets/**"]
@@ -111,13 +111,17 @@ While asleep mid-task the state is `waiting` (shown as in progress). An outcome 
 tried, why it stopped, the decision needed (for `blocked`/`error`), links (PR, run, logs), the verification signal
 used, and cost. Outcomes are also emitted as wake events, so a later manager can listen to them.
 
+`started` is a lifecycle notification sent when a task begins; it is separate from the outcomes above and does not
+end a task.
+
 ## 5. Responsibilities
 
 ### `dep-updates`
 - **Wakes on** its own schedule (default weekly) and on Dependabot version-update PRs.
 - **Own check**: finds outdated packages (`npm outdated`, `pip list --outdated` or an equivalent), filters by
   `allow`, `min_release_age` and `hold`, applies the bumps deterministically, and opens **one grouped PR per week**.
-  Majors get their own PR and are never auto-merged.
+  Each major gets its own PR, one per package, never auto-merged; `allow` governs only the grouped PR and
+  auto-merge.
 - **Dependabot PRs are adopted**: the bulb works on Dependabot's branch instead of opening a duplicate, and treats it
   like its own PR from then on (including `ci-fix`). A Dependabot PR that breaks the policy (too new, held package)
   gets a comment and the outcome `blocked`.
@@ -176,7 +180,8 @@ multi-provider SDK. The MVP ships the Claude engine; provider, model and effort 
 ## 10. Notifications
 
 Without the dashboard: a PR comment for every outcome on that PR, and a generic webhook (works with Discord, Slack
-and ntfy) for the outcomes the owner chose (default `ready`, `blocked`, `error`; optionally `started` and `done`).
+and ntfy) for the outcomes the owner chose (default `ready`, `blocked`, `error`; optionally the outcome `done` and the lifecycle
+notification `started`, sent when a task begins).
 With the dashboard: everything also goes to the task's thread there, which routes it on (see `dashboard-mvp.md`).
 
 ## 11. Repo layout and quality
@@ -189,11 +194,13 @@ With the dashboard: everything also goes to the task's thread there, which route
 
 ## 12. Open questions for the owner
 
-1. **State without the dashboard.** Resuming needs saved state. Proposal: the dashboard stores it; without a
-   dashboard, the bulb keeps compact state in a hidden comment on its PR (free, needs no infrastructure). Accept?
+1. **State without the dashboard.** **Decided:** a state store interface with two adapters; the default keeps compact
+   JSON task state in a hidden comment on the bulb's PR plus a bulb label, and the dashboard is the second adapter.
 2. **Default `min_release_age`.** Proposal: 7 days (Personal-Website sets 14).
-3. **A second engine in the MVP** to prove there's no lock-in, or the Claude engine plus the interface and contract
-   tests, with a second engine right after?
+3. **A second engine in the MVP.** **Decided:** the Claude engine only, with engine contract tests and a fake engine
+   for runner tests; a generic tool-loop engine follows after the MVP.
 4. **The owner's own installs** exceed the free limit of 1; the dashboard needs an owner override.
-5. **family-food's mixed setup** (yarn workspaces at the root, an npm lockfile in the app): configure the directory
-   (as in the example above), or fix the repo first?
+5. **family-food's mixed setup** (yarn workspaces at the root, an npm lockfile in the app). **Decided:**
+   lockfile-driven per configured directory (family-food uses `directories: [apps/web/family-food]`, a yarn or pnpm
+   lockfile gives `blocked`); pip edits only existing pins, and a fix in an unlisted transitive package adds an
+   explicit pin with a comment.
