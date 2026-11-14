@@ -14,8 +14,8 @@
       "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
     },
     "responsibility": {
-      "description": "The responsibility the task belonged to.",
-      "enum": ["dep-updates", "vuln-patch", "ci-fix"]
+      "description": "The responsibility the task belonged to; null when the runner ended the event before any responsibility ran (only with outcome skipped).",
+      "enum": ["dep-updates", "vuln-patch", "ci-fix", null]
     },
     "repo": {
       "description": "Target repository as owner/name.",
@@ -104,5 +104,14 @@
   "then": {
     "required": ["decision_needed"],
     "properties": { "decision_needed": { "type": "string" } }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": ["responsibility"],
+        "properties": { "responsibility": { "const": null } }
+      },
+      "then": { "properties": { "outcome": { "const": "skipped" } } }
+    }
+  ]
 }

@@ -56,6 +56,28 @@ export function withDefaultsRequired<T>(schema: T): T {
   return result as T;
 }
 
+/**
+ * Returns a copy of `schema` without root `allOf` entries made only of `if`/`then`/`else`. The generator ignores
+ * those keywords but would still emit the empty entry as an open `{ [k: string]: unknown }` intersection, which
+ * would let unknown keys compile. Ajv still enforces the rules from the schema file. Does not mutate its input.
+ */
+export function withoutConditionalAllOf<T>(schema: T): T {
+  if (!isObject(schema) || !Array.isArray(schema.allOf)) {
+    return schema;
+  }
+  const conditional = new Set(['if', 'then', 'else']);
+  const kept = (schema.allOf as unknown[]).filter(
+    (entry) => !(isObject(entry) && Object.keys(entry).every((key) => conditional.has(key))),
+  );
+  const result: JsonObject = { ...schema };
+  if (kept.length > 0) {
+    result.allOf = kept;
+  } else {
+    delete result.allOf;
+  }
+  return result as T;
+}
+
 const compileOptions = {
   bannerComment: '',
   format: false,
@@ -123,7 +145,9 @@ export function generatedPathFor(name: string): string {
 
 /** Renders the generated TypeScript module for one schema entry as formatted text. */
 export async function renderTypes(entry: SchemaEntry): Promise<string> {
-  const schema = JSON.parse(await readFile(schemaPathFor(entry.name), 'utf8')) as JsonObject;
+  const schema = withoutConditionalAllOf(
+    JSON.parse(await readFile(schemaPathFor(entry.name), 'utf8')) as JsonObject,
+  );
 
   const compiled: string[] = [];
   for (const target of entry.types) {
