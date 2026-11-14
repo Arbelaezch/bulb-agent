@@ -35,3 +35,32 @@ export {
   taskStateByteLength,
 } from './validation/task-state-size.js';
 export { parseDurationMs } from './config/duration.js';
+export type { DashboardRequestHeaders } from './generated/dashboard-request-headers.js';
+export type { DashboardAck } from './generated/dashboard-ack.js';
+export type { DashboardError } from './generated/dashboard-error.js';
+export {
+  DASHBOARD_ERROR_ISSUE_MAX_LENGTH,
+  DASHBOARD_ERROR_MAX_ISSUES,
+  dashboardAckSchema,
+  dashboardErrorSchema,
+  dashboardRequestHeadersSchema,
+  parseDashboardAck,
+  parseDashboardError,
+  parseDashboardRequestHeaders,
+  toDashboardErrorIssues,
+} from './validation/dashboard-api.js';
+export {
+  DASHBOARD_API_VERSION,
+  DASHBOARD_AUTH_HEADER,
+  DASHBOARD_AUTH_SCHEME,
+  DASHBOARD_ERROR_STATUS,
+  dashboardApiEndpoints,
+  dashboardApiPath,
+  matchDashboardApiRoute,
+} from './dashboard-api/endpoints.js';
+export type {
+  DashboardEndpoint,
+  DashboardEndpointId,
+  DashboardRouteMatch,
+  DashboardRouteParams,
+} from './dashboard-api/endpoints.js';

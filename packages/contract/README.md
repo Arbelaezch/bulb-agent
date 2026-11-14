@@ -91,6 +91,79 @@ glob expansion cannot produce a `..` segment). Optional: `max_diff_lines` (integ
 runner always excludes `never_touch` and workflow paths, whatever the allowlist says. The real allowlists ship with
 each responsibility package.
 
+## Dashboard API
+
+The HTTP API the core uses to save and load task state and to report to the optional dashboard. The core works
+without the dashboard; this package is the source of truth for the API, and the dashboard implements it.
+
+```ts
+import { dashboardApiPath, matchDashboardApiRoute, parseDashboardError } from '<contract package>';
+```
+
+Request bodies are the existing contract documents, unchanged. `dashboardApiEndpoints` lists the endpoints;
+`dashboardApiPath(id, { repo, task_id? })` builds a URL-encoded path (and throws `RangeError` for an invalid `repo` or
+`task_id`, without echoing it), and `matchDashboardApiRoute(method, pathname)` routes a request.
+
+| Endpoint id | Method | Path | Request body | Success (200) |
+| --- | --- | --- | --- | --- |
+| `save_task_state` | `PUT` | `/v1/repos/{owner}/{name}/tasks/{task_id}/state` | `TaskState` | `DashboardAck` |
+| `load_task_state` | `GET` | `/v1/repos/{owner}/{name}/tasks/{task_id}/state` | none | `TaskState` |
+| `post_outcome` | `POST` | `/v1/repos/{owner}/{name}/outcomes` | `Outcome` | `DashboardAck` |
+| `post_notification` | `POST` | `/v1/repos/{owner}/{name}/notifications` | `LifecycleNotification` | `DashboardAck` |
+
+Each path segment is URL-encoded. `DashboardAck` is `{ ok: true }` (`parseDashboardAck`, `dashboardAckSchema`).
+Loading a task state that was never saved gives 404 `not_found`.
+
+### Auth header (`DashboardRequestHeaders`, `parseDashboardRequestHeaders`, `dashboardRequestHeadersSchema`)
+
+Every request sends `Authorization: Bearer <token>` (`DASHBOARD_AUTH_HEADER`, `DASHBOARD_AUTH_SCHEME`). The scheme is
+case-sensitive and the token uses the RFC 6750 characters `[A-Za-z0-9._~+/-]` with optional trailing `=`. The
+contract defines only the header's shape, not where the token comes from. The token is a secret: it never appears in
+logs, error bodies or recorded requests, and validation issues show the schema pattern, never the value.
+
+### Errors (`DashboardError`, `parseDashboardError`, `dashboardErrorSchema`)
+
+Any endpoint can answer with a status >= 400 and the body `{ error, message, issues? }`. `message` is one line and
+never contains request values or credentials; `issues` (up to 50) are the `{ path, message }` issues from the contract
+parsers, passed through `toDashboardErrorIssues`. A path can hold a client-supplied key name of any length, so that
+helper keeps the first 50 issues and truncates each `path` and `message` to 500 code points; send raw parser issues
+and the body may break the schema. `DASHBOARD_ERROR_STATUS` maps each code to its status:
+
+| `error` | Status | When |
+| --- | --- | --- |
+| `invalid_request` | 400 | the body is not JSON, fails its schema, or its `task_id` (state) or `repo` (outcome, notification) differs from the path |
+| `unauthorized` | 401 | the auth header is missing or the token is wrong |
+| `not_found` | 404 | unknown path, or no task state saved |
+| `method_not_allowed` | 405 | known path, wrong method |
+| `payload_too_large` | 413 | the body is too large, or a saved task state is over `TASK_STATE_MAX_BYTES` (10,240 bytes, the same limit as the PR-comment store, so a state can move between stores) |
+| `internal` | 500 | anything else |
+
+### Idempotency
+
+Saving task state is a `PUT` and overwrites. A task has exactly one outcome, keyed by (`repo`, `task_id`), so a
+retried post replaces the earlier one. A notification is keyed by (`repo`, `task_id`, `notification`). Repeats return
+200. Wake events are not part of this API; dashboard dispatch reaches the core through GitHub.
+
+### Mock dashboard server
+
+`startMockDashboardServer` is a local, in-memory implementation of this API for tests of the dashboard adapters. It
+is for tests only and lives behind a separate `./testing` subpath so `node:http` stays out of the main entry. From
+other workspaces import `<contract package>/testing` after `npm run build` (it resolves to `dist/`); inside this
+package use the relative path `src/testing/index.js`.
+
+```ts
+const server = await startMockDashboardServer({ token: 'test-token' });
+// server.url, e.g. http://127.0.0.1:54321; send `Authorization: Bearer test-token`
+await server.close();
+```
+
+Options: `token` (required; non-empty RFC 6750 token characters, else `TypeError`), `host` (default `127.0.0.1`) and
+`port` (default `0`, any free port). The server validates every request as described above and checks its own
+responses against the schemas.
+
+Inspection: `requests` (method, path, endpoint id and status only; never headers or bodies), `taskState(repo, taskId)`,
+`outcomes()`, `notifications()` (clones, in insertion order), `seedTaskState(repo, state)`, `reset()` and `close()`.
+
 ## Defaults
 
 Omitted keys take the defaults written in each key's schema `description`. Required: `version` (must be `1`) and

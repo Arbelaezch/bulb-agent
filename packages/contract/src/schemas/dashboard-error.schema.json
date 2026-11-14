@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DashboardError",
+  "description": "Error body for every dashboard API endpoint, sent with a status >= 400.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["error", "message"],
+  "properties": {
+    "error": {
+      "description": "invalid_request: 400. unauthorized: 401. not_found: 404. method_not_allowed: 405. payload_too_large: 413. internal: 500.",
+      "enum": [
+        "invalid_request",
+        "unauthorized",
+        "not_found",
+        "method_not_allowed",
+        "payload_too_large",
+        "internal"
+      ]
+    },
+    "message": {
+      "description": "One-line, human-readable message. It never contains request values or credentials.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "pattern": "^[^\\r\\n]+$"
+    },
+    "issues": {
+      "description": "Validation issues for an invalid request body, as reported by the contract parsers.",
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "message"],
+        "properties": {
+          "path": {
+            "description": "Dot path to the offending key; \"\" means the root.",
+            "type": "string",
+            "maxLength": 500
+          },
+          "message": {
+            "description": "What is wrong with the key; never contains request values.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        }
+      }
+    }
+  }
+}
