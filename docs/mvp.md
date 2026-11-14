@@ -185,7 +185,7 @@ With the dashboard: everything also goes to the task's thread there, which route
   use it), `runner` (CLI: `bulb run --event <file>`), `adapters/*`, `responsibilities/*`, and the GitHub Action.
 - Tests: unit tests for policy and budget enforcement and for each adapter; fixture repos (npm and pip) for each
   responsibility; one end-to-end run against a throwaway sandbox repo before installing on the real repos.
-- License: Apache-2.0. The repo starts private and becomes public when the MVP works.
+- License: Apache-2.0. The repo is public from the design stage on.
 
 ## 12. Open questions for the owner
 
